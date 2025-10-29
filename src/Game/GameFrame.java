@@ -4,10 +4,9 @@ import Game.*;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
-import java.awt.event.WindowAdapter;
-import java.awt.event.WindowEvent;
+import java.awt.event.*;
+import java.awt.font.FontRenderContext;
+import java.awt.geom.Rectangle2D;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +16,7 @@ public class GameFrame extends Frame {
     int totalScore = 0;
     long startTimeMillis = 0L;
     // 游戏资源
-    Image bg = loadImage("../img/bg.png");
+    Image bg = loadImage("../img/duck.png");
     Image tank = loadImage("../img/tank.png");
 
     // 坦克状态
@@ -34,6 +33,10 @@ public class GameFrame extends Frame {
     List<Bullet> bulletList = new ArrayList<>();
     Random random = new Random(); // 用于生成随机值
     int bulletSpawnRate = 10; // 子弹生成概率（数值越大生成越慢）
+
+    // 定义可点击区域
+    private final Rectangle clickableArea = new Rectangle(20,50,100,100);
+    private final String clickableAreaText = "Click here";
 
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
@@ -60,7 +63,89 @@ public class GameFrame extends Frame {
             }
         });
 
+        addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int x = e.getX();
+                int y = e.getY();
+                if(clickableArea.contains(x, y)){
+                    showInputDialog();
+                }
+            }
+        });
+
         setVisible(true);
+    }
+
+    private void showInputDialog() {
+        Dialog inputDialog = new Dialog(this,"Input cmd",true);
+        inputDialog.setSize(300,300);
+        inputDialog.setLocationRelativeTo(null);
+
+
+        // show text
+        Label tipLabel = new Label("Enter your command");
+        tipLabel.setBounds(150,50,100,50);
+        inputDialog.add(tipLabel);
+
+        // input area
+        TextField inputField = new TextField();
+        inputField.setBounds(150,50,100,50);
+        inputDialog.add(inputField);
+
+        // ok button
+        Button submitButton = new Button("Submit");
+        submitButton.setBounds(150,100,100,50);
+        submitButton.addActionListener(e -> {
+            String command = inputField.getText().trim();
+            handleInput(command);
+            inputDialog.dispose();
+        });
+        inputDialog.add(submitButton);
+
+        // close
+        inputDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                inputDialog.dispose();
+            }
+        });
+        inputDialog.setVisible(true);
+    }
+
+    private void handleInput(String command) {
+        if(command.isEmpty()){ return; }
+        switch (command){
+            case "wear": showTipDialog("Input wear command");
+            case "python": showTipDialog("Input python command");
+            default: showTipDialog("Invalid command");
+        }
+    }
+
+    private void showTipDialog(String message) {
+        Dialog tipDialog = new Dialog(this, "提示", true);
+        tipDialog.setSize(320, 180);
+        tipDialog.setLocationRelativeTo(this);
+        tipDialog.setLayout(null);
+
+        Label tipLabel = new Label(message);
+        tipLabel.setBounds(30, 40, 260, 60);
+        tipLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        tipDialog.add(tipLabel);
+
+        Button okBtn = new Button("确定");
+        okBtn.setBounds(130, 120, 60, 30);
+        okBtn.addActionListener(e -> tipDialog.dispose());
+        tipDialog.add(okBtn);
+
+        tipDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                tipDialog.dispose();
+            }
+        });
+
+        tipDialog.setVisible(true);
     }
 
     // 子弹的大小
@@ -292,6 +377,24 @@ public class GameFrame extends Frame {
     public void paint(Graphics g) {
         // 绘制背景
         g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+        // 绘制可点击区域
+        Color keepColor = g.getColor();
+
+        g.setColor(new Color(0, 0, 0, 180));
+        g.fillRoundRect(
+                clickableArea.x, clickableArea.y,
+                clickableArea.width, clickableArea.height,
+                8, 8 // 圆角半径
+        );
+        g.setColor(Color.WHITE);
+        g.setFont(new Font("Arial", Font.BOLD, 14));
+        FontRenderContext frc = ((Graphics2D) g).getFontRenderContext();
+        Rectangle2D textRect = g.getFont().getStringBounds(clickableAreaText, frc);
+        int textX1 = clickableArea.x + (int)((clickableArea.width - textRect.getWidth())/2);
+        int textY1 = clickableArea.y + (int)((clickableArea.height + textRect.getHeight())/2) - 3;
+        g.drawString(clickableAreaText, textX1, textY1);
+        g.setColor(keepColor);
+
         // 绘制坦克
         g.drawImage(tank, tankX, tankY, tankWidth, tankHeight, this);
         // 绘制所有子弹
