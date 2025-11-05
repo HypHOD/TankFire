@@ -79,23 +79,23 @@ public class GameFrame extends Frame {
 
     private void showInputDialog() {
         Dialog inputDialog = new Dialog(this,"Input cmd",true);
-        inputDialog.setSize(300,300);
+        inputDialog.setSize(300,150);
         inputDialog.setLocationRelativeTo(null);
 
 
         // show text
-        Label tipLabel = new Label("Enter your command");
-        tipLabel.setBounds(150,50,100,50);
-        inputDialog.add(tipLabel);
+//        Label tipLabel = new Label("Enter your command");
+//        tipLabel.setBounds(0,25,300,50);
+//        inputDialog.add(tipLabel);
 
         // input area
         TextField inputField = new TextField();
-        inputField.setBounds(150,50,100,50);
+        inputField.setBounds(0,25,300,50);
         inputDialog.add(inputField);
 
         // ok button
         Button submitButton = new Button("Submit");
-        submitButton.setBounds(150,100,100,50);
+        submitButton.setBounds(0,75,300,15);
         submitButton.addActionListener(e -> {
             String command = inputField.getText().trim();
             handleInput(command);
