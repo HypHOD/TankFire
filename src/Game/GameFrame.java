@@ -36,7 +36,6 @@ public class GameFrame extends Frame {
 
     // 定义可点击区域
     private final Rectangle clickableArea = new Rectangle(20,50,100,100);
-    private final String clickableAreaText = "Click here";
 
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
@@ -82,12 +81,6 @@ public class GameFrame extends Frame {
         inputDialog.setSize(300,150);
         inputDialog.setLocationRelativeTo(null);
 
-
-        // show text
-//        Label tipLabel = new Label("Enter your command");
-//        tipLabel.setBounds(0,25,300,50);
-//        inputDialog.add(tipLabel);
-
         // input area
         TextField inputField = new TextField();
         inputField.setBounds(0,25,300,50);
@@ -116,9 +109,19 @@ public class GameFrame extends Frame {
     private void handleInput(String command) {
         if(command.isEmpty()){ return; }
         switch (command){
-            case "wear": showTipDialog("Input wear command");
-            case "python": showTipDialog("Input python command");
-            default: showTipDialog("Invalid command");
+            case "wear":
+                showTipDialog("Input wear command");
+                // 修改背景图衣服颜色
+                // todo
+                break;
+            case "python":
+                showTipDialog("Input python command");
+                //调用python程序计算代码行数
+                // todo
+                break;
+            default:
+                showTipDialog("Invalid command");
+                break;
         }
     }
 
@@ -389,6 +392,7 @@ public class GameFrame extends Frame {
         g.setColor(Color.WHITE);
         g.setFont(new Font("Arial", Font.BOLD, 14));
         FontRenderContext frc = ((Graphics2D) g).getFontRenderContext();
+        String clickableAreaText = "Click here";
         Rectangle2D textRect = g.getFont().getStringBounds(clickableAreaText, frc);
         int textX1 = clickableArea.x + (int)((clickableArea.width - textRect.getWidth())/2);
         int textY1 = clickableArea.y + (int)((clickableArea.height + textRect.getHeight())/2) - 3;
