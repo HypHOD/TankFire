@@ -1,16 +1,20 @@
-package Game_old;
-
+package Game;
 import Game.*;
-
 import javax.imageio.ImageIO;
+import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import java.awt.font.FontRenderContext;
 import java.awt.geom.Rectangle2D;
+import java.io.File;
+import java.io.IOException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import java.util.Map;
+import java.util.HashMap;
 
 public class GameFrame extends Frame {
     int totalScore = 0;
@@ -37,6 +41,9 @@ public class GameFrame extends Frame {
     // 定义可点击区域
     private final Rectangle clickableArea = new Rectangle(20,50,100,100);
 
+    // 衣服颜色配置（wear对话框使用）
+    private final Map<String, Map<String, Map<String, Color>>> clothesColorConfig = new HashMap<>();
+
     public static void main(String[] args) {
         GameFrame frame = new GameFrame();
         frame.InitialFrame();
@@ -49,6 +56,9 @@ public class GameFrame extends Frame {
         setLocationRelativeTo(null); // 居中显示
         setResizable(false); // 固定窗口大小
         startTimeMillis = System.currentTimeMillis();
+
+        // 初始化衣服颜色配置
+        initClothesColorConfig();
 
         // 启动绘制线程
         new PaintThread().start();
@@ -77,24 +87,23 @@ public class GameFrame extends Frame {
     }
 
     private void showInputDialog() {
-        Dialog inputDialog = new Dialog(this,"Input cmd",true);
-        inputDialog.setSize(300,150);
+        JDialog inputDialog = new JDialog(this,"Input cmd",true);
+        inputDialog.setSize(300,80);
         inputDialog.setLocationRelativeTo(null);
 
         // input area
         TextField inputField = new TextField();
-        inputField.setBounds(0,25,300,50);
-        inputDialog.add(inputField);
+        inputDialog.add(inputField,BorderLayout.CENTER);
 
-        // ok button
-        Button submitButton = new Button("Submit");
-        submitButton.setBounds(0,75,300,15);
+        // ok button（修改为JButton）
+        JButton submitButton = new JButton("Submit");
+        submitButton.setForeground(Color.BLACK);
         submitButton.addActionListener(e -> {
             String command = inputField.getText().trim();
             handleInput(command);
             inputDialog.dispose();
         });
-        inputDialog.add(submitButton);
+        inputDialog.add(submitButton,BorderLayout.SOUTH);
 
         // close
         inputDialog.addWindowListener(new WindowAdapter() {
@@ -110,24 +119,427 @@ public class GameFrame extends Frame {
         if(command.isEmpty()){ return; }
         switch (command){
             case "wear":
-                showTipDialog("Input wear command");
-                // 修改背景图衣服颜色
-                // todo
+                showClothesDialog(); // 打开衣服颜色配置对话框
                 break;
-            case "python":
-                showTipDialog("Input python command");
-                //调用python程序计算代码行数
-                // todo
+            case "count":
+                showCountDialog(); // 打开代码行数统计对话框
+                break;
+            case "talk":
+                showTipDialog("Input talk command");
+                // todo 用户与ai对话
+                showTalkDialog();
                 break;
             default:
                 showTipDialog("Invalid command");
                 break;
         }
     }
+    // ----------- 对话功能 -----------
+    private void showTalkDialog(){
+        JDialog dialog = new JDialog(this,"Talk with Bot",true);
+        dialog.setSize(300,500);
+        dialog.setLocationRelativeTo(null);
+        // 历史内容
+        JTextArea textArea = new JTextArea();
+        textArea.setLineWrap(true);
+        textArea.setWrapStyleWord(true);
+        textArea.setEditable(false);
+        textArea.setPreferredSize(new Dimension(300, 400));
 
+        dialog.add(textArea,BorderLayout.NORTH);
+        // 输入框
+        JTextField inputField = new JTextField();
+        inputField.setPreferredSize(new Dimension(300, 50));
+        dialog.add(inputField);
+        // 发送按钮
+        JButton sendButton = new JButton("Send");
+        sendButton.addActionListener(e -> {
+            String user_talk=inputField.getText().trim();
+            if(!user_talk.isEmpty()){
+                System.out.println("user_talk:"+user_talk);
+                String history = textArea.getText();
+                textArea.setText(history + "用户：" + user_talk + "\n");
+                inputField.setText("");
+                textArea.setCaretPosition(textArea.getDocument().getLength());
+                try{
+//                    String aiReply = getAiReply(userTalk);
+//                    textArea.setText(textArea.getText() + "Bot：" + aiReply + "\n\n");
+                }catch (Exception err){
+                    System.out.println("Bot can not reply beacuse:"+err.getMessage());
+                }
+            }
+        });
+        inputField.addActionListener(e -> sendButton.doClick());
+        dialog.add(sendButton,BorderLayout.SOUTH);
+
+        dialog.setVisible(true);
+    }
+
+    // -------------------------- 1. 衣服颜色配置对话框（wear命令）相关代码 --------------------------
+    // 初始化衣服颜色配置
+    private void initClothesColorConfig() {
+        // 夏季配置
+        Map<String, Map<String, Color>> summerConfig = new HashMap<>();
+        Map<String, Color> summerDay = new HashMap<>();
+        summerDay.put("晴天", new Color(255, 165, 0)); // 橙色
+        summerDay.put("雨天", new Color(65, 105, 225)); // 皇家蓝
+        Map<String, Color> summerNight = new HashMap<>();
+        summerNight.put("晴天", new Color(138, 43, 226)); // 蓝紫色
+        summerNight.put("雨天", new Color(25, 25, 112)); // 午夜蓝
+        summerConfig.put("白天", summerDay);
+        summerConfig.put("晚上", summerNight);
+
+        // 冬季配置
+        Map<String, Map<String, Color>> winterConfig = new HashMap<>();
+        Map<String, Color> winterDay = new HashMap<>();
+        winterDay.put("晴天", new Color(255, 255, 255)); // 白色
+        winterDay.put("雨天", new Color(100, 149, 237)); // 钢青蓝
+        Map<String, Color> winterNight = new HashMap<>();
+        winterNight.put("晴天", new Color(0, 0, 0)); // 黑色
+        winterNight.put("雨天", new Color(47, 79, 79)); // 深青色
+        winterConfig.put("白天", winterDay);
+        winterConfig.put("晚上", winterNight);
+
+        clothesColorConfig.put("夏季", summerConfig);
+        clothesColorConfig.put("冬季", winterConfig);
+    }
+
+    // 衣服颜色配置对话框（修复按钮为JButton）
+    private void showClothesDialog() {
+        Dialog clothesDialog = new Dialog(this, "配置衣服颜色", true);
+        clothesDialog.setSize(400, 300);
+        clothesDialog.setLocationRelativeTo(this);
+        clothesDialog.setLayout(null);
+        clothesDialog.setBackground(Color.WHITE);
+
+        // 标题
+        Label titleLabel = new Label("选择季节、时间和天气");
+        titleLabel.setBounds(0, 20, 400, 20);
+        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        titleLabel.setAlignment(Label.CENTER);
+        clothesDialog.add(titleLabel);
+
+        // 季节选择
+        Label seasonLabel = new Label("季节：");
+        seasonLabel.setBounds(50, 60, 60, 25);
+        seasonLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(seasonLabel);
+
+        String[] seasons = {"夏季", "冬季"};
+        JComboBox<String> seasonCombo = new JComboBox<>(seasons);
+        seasonCombo.setBounds(120, 60, 100, 25);
+        seasonCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(seasonCombo);
+
+        // 时间选择
+        Label timeLabel = new Label("时间：");
+        timeLabel.setBounds(50, 110, 60, 25);
+        timeLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(timeLabel);
+
+        String[] times = {"白天", "晚上"};
+        JComboBox<String> timeCombo = new JComboBox<>(times);
+        timeCombo.setBounds(120, 110, 100, 25);
+        timeCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(timeCombo);
+
+        // 天气选择
+        Label weatherLabel = new Label("天气：");
+        weatherLabel.setBounds(50, 160, 60, 25);
+        weatherLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(weatherLabel);
+
+        String[] weathers = {"晴天", "雨天"};
+        JComboBox<String> weatherCombo = new JComboBox<>(weathers);
+        weatherCombo.setBounds(120, 160, 100, 25);
+        weatherCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        clothesDialog.add(weatherCombo);
+
+        // 确认按钮（JButton，修复样式方法）
+        JButton confirmBtn = new JButton("确认");
+        confirmBtn.setBounds(150, 220, 100, 30);
+        confirmBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        confirmBtn.setBackground(new Color(66, 133, 244));
+        confirmBtn.setForeground(Color.BLACK);
+        confirmBtn.setBorderPainted(false); // 有效，JButton支持
+        confirmBtn.setFocusPainted(false); // 有效，JButton支持
+        confirmBtn.addActionListener(e -> {
+            String season = (String) seasonCombo.getSelectedItem();
+            String time = (String) timeCombo.getSelectedItem();
+            String weather = (String) weatherCombo.getSelectedItem();
+
+            // 获取对应的颜色并修改背景
+            Color targetColor = clothesColorConfig.get(season).get(time).get(weather);
+            if (targetColor != null) {
+                bg = createColoredBackground(targetColor, getWidth(), getHeight());
+                showTipDialog(String.format("已设置%s-%s-%s的衣服颜色！", season, time, weather));
+            } else {
+                showTipDialog("未找到对应配置的颜色！");
+            }
+            clothesDialog.dispose();
+        });
+        clothesDialog.add(confirmBtn);
+
+        // 关闭事件
+        clothesDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                clothesDialog.dispose();
+            }
+        });
+
+        clothesDialog.setVisible(true);
+    }
+
+    // 创建指定颜色的背景图
+    // todo 绘制衣服
+    private Image createColoredBackground(Color color, int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2d = image.createGraphics();
+        g2d.setColor(color);
+        g2d.fillRect(0, 0, width, height);
+        g2d.dispose();
+        return image;
+    }
+
+    // -------------------------- 2. 代码行数统计对话框（count命令）相关代码 --------------------------
+    // 代码行数统计结果模型
+    static class CodeLineCountResult {
+        private int fileCount;
+        private int totalLines;
+        private int emptyLines;
+        private int commentLines;
+        private int codeLines;
+
+        public CodeLineCountResult(int fileCount, int totalLines, int emptyLines, int commentLines, int codeLines) {
+            this.fileCount = fileCount;
+            this.totalLines = totalLines;
+            this.emptyLines = emptyLines;
+            this.commentLines = commentLines;
+            this.codeLines = codeLines;
+        }
+
+        // Getters
+        public int getFileCount() { return fileCount; }
+        public int getTotalLines() { return totalLines; }
+        public int getEmptyLines() { return emptyLines; }
+        public int getCommentLines() { return commentLines; }
+        public int getCodeLines() { return codeLines; }
+    }
+
+    // 代码行数统计对话框（修复所有按钮为JButton）
+    private void showCountDialog() {
+        Dialog countDialog = new Dialog(this, "代码行数统计", true);
+        countDialog.setSize(450, 350);
+        countDialog.setLocationRelativeTo(this);
+        countDialog.setLayout(null);
+        countDialog.setBackground(Color.WHITE);
+
+        // 标题
+        Label titleLabel = new Label("代码行数统计配置");
+        titleLabel.setBounds(0, 20, 450, 20);
+        titleLabel.setFont(new Font("Microsoft YaHei", Font.BOLD, 16));
+        titleLabel.setAlignment(Label.CENTER);
+        countDialog.add(titleLabel);
+
+        // 文件夹选择
+        Label folderLabel = new Label("目标文件夹：");
+        folderLabel.setBounds(30, 60, 80, 25);
+        folderLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(folderLabel);
+
+        TextField folderField = new TextField(System.getProperty("user.dir"));
+        folderField.setBounds(120, 60, 250, 25);
+        folderField.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(folderField);
+
+        // 浏览按钮（JButton）
+        JButton browseBtn = new JButton("浏览");
+        browseBtn.setBounds(380, 60, 60, 25);
+        browseBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 12));
+        browseBtn.setBackground(new Color(0, 0, 0));
+        browseBtn.setBorderPainted(false);
+        browseBtn.setFocusPainted(false);
+        browseBtn.addActionListener(e -> {
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int result = fileChooser.showOpenDialog(countDialog);
+            if (result == JFileChooser.APPROVE_OPTION) {
+                folderField.setText(fileChooser.getSelectedFile().getAbsolutePath());
+            }
+        });
+        countDialog.add(browseBtn);
+
+        // 语言类型选择
+        Label langLabel = new Label("语言类型：");
+        langLabel.setBounds(30, 110, 80, 25);
+        langLabel.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(langLabel);
+
+        Map<String, String[]> langExtensions = new HashMap<>();
+        langExtensions.put("Java", new String[]{".java"});
+        langExtensions.put("Python", new String[]{".py"});
+        langExtensions.put("JavaScript", new String[]{".js"});
+        langExtensions.put("All", new String[]{".java", ".py", ".js", ".cpp", ".c", ".html", ".css"});
+
+        String[] languages = langExtensions.keySet().toArray(new String[0]);
+        JComboBox<String> langCombo = new JComboBox<>(languages);
+        langCombo.setBounds(120, 110, 120, 25);
+        langCombo.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countDialog.add(langCombo);
+
+        // 选项复选框
+        JCheckBox emptyLineBox = new JCheckBox("统计空行数");
+        emptyLineBox.setBounds(30, 160, 120, 25);
+        emptyLineBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        emptyLineBox.setSelected(true);
+        countDialog.add(emptyLineBox);
+
+        JCheckBox commentBox = new JCheckBox("统计注释行数");
+        commentBox.setBounds(180, 160, 120, 25);
+        commentBox.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        commentBox.setSelected(true);
+        countDialog.add(commentBox);
+
+        // 统计按钮（修复为JButton，添加样式方法）
+        JButton countBtn = new JButton("开始统计");
+        countBtn.setBounds(170, 220, 120, 30);
+        countBtn.setFont(new Font("Microsoft YaHei", Font.PLAIN, 14));
+        countBtn.setBackground(new Color(66, 133, 244));
+        countBtn.setForeground(Color.BLACK);
+        countBtn.setBorderPainted(false); // 现在有效
+        countBtn.setFocusPainted(false); // 现在有效
+        countBtn.addActionListener(e -> {
+            String folderPath = folderField.getText().trim();
+            String language = (String) langCombo.getSelectedItem();
+            boolean countEmpty = emptyLineBox.isSelected();
+            boolean countComment = commentBox.isSelected();
+
+            // 验证文件夹是否存在
+            File folder = new File(folderPath);
+            if (!folder.exists() || !folder.isDirectory()) {
+                showTipDialog("文件夹不存在！");
+                return;
+            }
+
+            // 异步统计（避免阻塞UI）
+            new Thread(() -> {
+                try {
+                    String[] extensions = langExtensions.get(language);
+                    CodeLineCountResult result = countCodeLines(folder, extensions, countEmpty, countComment);
+
+                    // 显示统计结果
+                    SwingUtilities.invokeLater(() -> {
+                        String resultMsg = String.format(
+                                "统计结果：\n" +
+                                        "目标文件夹：%s\n" +
+                                        "语言类型：%s\n" +
+                                        "总文件数：%d\n" +
+                                        "总行数：%d\n" +
+                                        "空行数：%d\n" +
+                                        "注释行数：%d\n" +
+                                        "有效代码行数：%d",
+                                folderPath, language,
+                                result.getFileCount(), result.getTotalLines(),
+                                result.getEmptyLines(), result.getCommentLines(),
+                                result.getCodeLines()
+                        );
+                        showTipDialog(resultMsg);
+                    });
+                } catch (Exception ex) {
+                    SwingUtilities.invokeLater(() -> showTipDialog("统计失败：" + ex.getMessage()));
+                }
+            }).start();
+
+            countDialog.dispose();
+        });
+        countDialog.add(countBtn);
+
+        // 关闭事件
+        countDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                countDialog.dispose();
+            }
+        });
+
+        countDialog.setVisible(true);
+    }
+
+    // 代码行数统计核心方法
+    private CodeLineCountResult countCodeLines(File folder, String[] extensions, boolean countEmpty, boolean countComment) throws IOException {
+        int fileCount = 0;
+        int totalLines = 0;
+        int emptyLines = 0;
+        int commentLines = 0;
+
+        // 遍历文件夹下所有指定后缀的文件
+        File[] files = folder.listFiles((dir, name) -> {
+            for (String ext : extensions) {
+                if (name.toLowerCase().endsWith(ext.toLowerCase())) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
+        if (files == null) return new CodeLineCountResult(0, 0, 0, 0, 0);
+
+        for (File file : files) {
+            if (file.isFile()) {
+                fileCount++;
+                List<String> lines = java.nio.file.Files.readAllLines(file.toPath(), StandardCharsets.UTF_8);
+                totalLines += lines.size();
+
+                boolean inBlockComment = false;
+                for (String line : lines) {
+                    String trimmedLine = line.trim();
+
+                    // 统计空行
+                    if (trimmedLine.isEmpty()) {
+                        emptyLines++;
+                        continue;
+                    }
+
+                    // 统计注释行（支持//和/* */）
+                    if (inBlockComment) {
+                        commentLines++;
+                        if (trimmedLine.endsWith("*/")) {
+                            inBlockComment = false;
+                        }
+                    } else {
+                        if (trimmedLine.startsWith("//")) {
+                            commentLines++;
+                        } else if (trimmedLine.startsWith("/*")) {
+                            commentLines++;
+                            if (!trimmedLine.endsWith("*/")) {
+                                inBlockComment = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // 计算有效代码行数
+        int codeLines = totalLines;
+        if (!countEmpty) codeLines -= emptyLines;
+        if (!countComment) codeLines -= commentLines;
+
+        return new CodeLineCountResult(fileCount, totalLines, emptyLines, commentLines, codeLines);
+    }
+
+    // 补充缺失的BufferedImage内部类（避免编译错误）
+    private static class BufferedImage extends java.awt.image.BufferedImage {
+        public BufferedImage(int width, int height, int imageType) {
+            super(width, height, imageType);
+        }
+    }
+
+    // 提示对话框（修复按钮为JButton）
     private void showTipDialog(String message) {
         Dialog tipDialog = new Dialog(this, "提示", true);
-        tipDialog.setSize(320, 180);
+        tipDialog.setSize(320, 150);
         tipDialog.setLocationRelativeTo(this);
         tipDialog.setLayout(null);
 
@@ -136,8 +548,12 @@ public class GameFrame extends Frame {
         tipLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         tipDialog.add(tipLabel);
 
-        Button okBtn = new Button("确定");
+        // 确定按钮（修改为JButton）
+        JButton okBtn = new JButton("确定");
         okBtn.setBounds(130, 120, 60, 30);
+        okBtn.setBackground(new Color(240, 240, 240));
+        okBtn.setBorderPainted(false);
+        okBtn.setFocusPainted(false);
         okBtn.addActionListener(e -> tipDialog.dispose());
         tipDialog.add(okBtn);
 
@@ -194,10 +610,7 @@ public class GameFrame extends Frame {
             this.x += this.speed;
         }
         // 绘制子弹
-        // 根据大小和形状绘制
         public void draw(Graphics g) {
-            g.setColor(Color.RED);
-//            g.fillRect(x, y, (int) (width*this.damage), (int) (height*this.damage));
             // 根据种类绘制不同的子弹
             switch (kind) {
                 case "Cross":{
@@ -207,7 +620,7 @@ public class GameFrame extends Frame {
                 }
                 break;
                 case "Dot":{
-                    // 画个点
+                    // 画圆形边框
                     g.setColor(Color.YELLOW);
                     g.drawRoundRect(x, y, (int) (width*this.damage), (int) (height*this.damage), 10, 10);
                 }
@@ -251,18 +664,12 @@ public class GameFrame extends Frame {
 
         // 随机生成子弹（从屏幕左侧）
         private void spawnRandomBullet() {
-            // 随机概率生成子弹，控制生成频率
             if (random.nextInt(bulletSpawnRate) == 0) {
-                // 子弹从屏幕左侧生成（x=0）
                 int startX = 0;
-                // 子弹y坐标在屏幕高度范围内随机
-                int startY = random.nextInt(getHeight() - 10); // 10是子弹高度
-                // 子弹速度随机（2-8像素/帧）
-                int speed = random.nextInt(7) + 2; // [2,8]范围
+                int startY = random.nextInt(getHeight() - 10);
+                int speed = random.nextInt(7) + 2;
 
-                // 添加新子弹到列表
-                // 生成随机大小和形状的子弹
-//                bulletList.add(new Bullet(startX, startY, speed));
+                // 随机生成不同类型和大小的子弹
                 switch (new Random().nextInt(7)) {
                     case 0: break;
                     case 1:
@@ -283,9 +690,7 @@ public class GameFrame extends Frame {
                     case 6:
                         bulletList.add(new Bullet(startX, startY, speed, "Dot", large));
                         break;
-
                 }
-//                bulletList.add(new Bullet(startX, startY, speed, "Cross", small));
             }
         }
 
@@ -308,7 +713,6 @@ public class GameFrame extends Frame {
                 if (bulletRect.intersects(tankRect)) {
                     totalScore += (int) bulletList.get(i).damage;
                     bulletList.remove(i);
-//                    totalScore += 1;
                     i--;
                     continue;
                 }
@@ -405,26 +809,26 @@ public class GameFrame extends Frame {
         for (Bullet bullet : bulletList) {
             bullet.draw(g);
         }
-        // 中间下方时间与分数（同一行，Score 在 Time 右侧）
+        // 中间下方时间与分数
         g.setFont(new Font("Arial", Font.BOLD, 18));
         long elapsedSec = Math.max(0, (System.currentTimeMillis() - startTimeMillis) / 1000);
         long mm = elapsedSec / 60;
         long ss = elapsedSec % 60;
         String leftTimeText = String.format("Time: %02d:%02d", mm, ss);
         String leftScoreText = "  |  Score: " + totalScore;
-        
+
         // 计算居中位置
         int timeWidth = g.getFontMetrics().stringWidth(leftTimeText);
         int scoreWidth = g.getFontMetrics().stringWidth(leftScoreText);
         int totalWidth = timeWidth + scoreWidth;
         int baseX = (getWidth() - totalWidth) / 2; // 水平居中
         int baseY = getHeight() - 30; // 距离底部30像素
-        
+
         // 绘制半透明背景
         Color old = g.getColor();
         g.setColor(new Color(0, 0, 0, 150));
         g.fillRoundRect(baseX - 10, baseY - 18, totalWidth + 20, 25, 5, 5);
-        
+
         // 绘制文字（黄色，更醒目）
         g.setColor(Color.YELLOW);
         g.drawString(leftTimeText, baseX, baseY);
